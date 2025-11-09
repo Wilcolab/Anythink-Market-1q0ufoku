@@ -88,3 +88,60 @@ router.post("/users", function(req, res, next) {
 });
 
 module.exports = router;
+
+// integrated isVerified field into /items API response for each seller
+router.get("/", auth.optional, function(req, res, next) {
+  var query = {};
+  var limit = 20;
+  var offset = 0;
+
+  if (typeof req.query.limit !== "undefined") {
+    limit = req.query.limit;
+  }
+
+  if (typeof req.query.offset !== "undefined") {
+    offset = req.query.offset;
+  }
+
+  Promise.all([
+    req.payload ? User.findById(req.payload.id) : null,
+    Item.find(query)
+      .limit(Number(limit))
+      .skip(Number(offset))
+      .populate("seller")
+      .exec(),
+    Item.countDocuments(query).exec()
+  ])
+    .then(function(results) {
+      var user = results[0];
+      var items = results[1];
+      var itemsCount = results[2];
+
+      return res.json({
+        items: items.map(function(item) {
+          return item.toJSONFor(user);
+        }),
+        itemsCount: itemsCount
+      });
+    })
+    .catch(next);
+});
+
+const {toggleIsVerified} = require('../../lib/userUtils');
+
+//new endpoint to toggle user's verification status
+router.post("/toggle-verify", auth.required, function(req, res, next) {
+  User.findById(req.payload.id)
+    .then(function(user) {
+      if (!user) {
+        return res.sendStatus(401);
+      }
+
+      toggleIsVerified(user)
+        .then(updatedUser => {
+          return res.json({ user: updatedUser.toAuthJSON() });
+        })
+        .catch(next);
+    })
+    .catch(next);
+});
