@@ -329,3 +329,20 @@ router.delete("/:item/comments/:comment", auth.required, function(
 });
 
 module.exports = router;
+
+// Write a helper that toggles the user's verification status and logs the change
+module.exports.toggleVerification = function(userId, isVerified) {
+  return User.findById(userId).then(function(user) {
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    user.isVerified = isVerified;
+    return user.save().then(function(updatedUser) {
+      console.log(
+        `User ${updatedUser.username} verification status changed to: ${isVerified}`
+      );
+      return updatedUser;
+    });
+  });
+};  
