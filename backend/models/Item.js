@@ -45,6 +45,23 @@ ItemSchema.methods.updateFavoriteCount = function() {
 };
 
 ItemSchema.methods.toJSONFor = function(user) {
+  // build seller profile using existing helper if available
+  let sellerProfile = {};
+  if (this.seller && typeof this.seller.toProfileJSONFor === "function") {
+    sellerProfile = this.seller.toProfileJSONFor(user);
+  } else if (this.seller) {
+    // fallback if seller not populated with helper
+    sellerProfile = {
+      username: this.seller.username,
+      bio: this.seller.bio,
+      image: this.seller.image,
+      following: false
+    };
+  }
+
+  // ensure isVerified is returned (default false)
+  sellerProfile.isVerified = !!(this.seller && this.seller.isVerified);
+
   return {
     slug: this.slug,
     title: this.title,
@@ -55,8 +72,23 @@ ItemSchema.methods.toJSONFor = function(user) {
     tagList: this.tagList,
     favorited: user ? user.isFavorite(this._id) : false,
     favoritesCount: this.favoritesCount,
-    seller: this.seller.toProfileJSONFor(user)
+    seller: sellerProfile
   };
 };
+
+// ItemSchema.methods.toJSONFor = function(user) {
+//   return {
+//     slug: this.slug,
+//     title: this.title,
+//     description: this.description,
+//     image: this.image,
+//     createdAt: this.createdAt,
+//     updatedAt: this.updatedAt,
+//     tagList: this.tagList,
+//     favorited: user ? user.isFavorite(this._id) : false,
+//     favoritesCount: this.favoritesCount,
+//     seller: this.seller.toProfileJSONFor(user)
+//   };
+// };
 
 mongoose.model("Item", ItemSchema);
